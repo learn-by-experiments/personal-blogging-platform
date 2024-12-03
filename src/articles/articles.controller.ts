@@ -3,6 +3,8 @@ import {
   Controller,
   Delete,
   Get,
+  HttpException,
+  HttpStatus,
   Param,
   ParseIntPipe,
   Post,
@@ -12,6 +14,7 @@ import {
 import { CreateArticleDto } from './dto/create-article.dto';
 import { ArticlesService } from './articles.service';
 import { UpdateArticleDto } from './dto/update-article.dto';
+import { error } from 'console';
 
 @Controller('articles')
 export class ArticlesController {
@@ -21,7 +24,6 @@ export class ArticlesController {
     @Body(new ValidationPipe({ whitelist: true, stopAtFirstError: true }))
     createArticleDto: CreateArticleDto,
   ) {
-    console.log(createArticleDto);
     return this.articlesService.create(createArticleDto);
   }
 
@@ -31,12 +33,22 @@ export class ArticlesController {
   }
 
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.articlesService.findOne(id);
+  async findOne(@Param('id', ParseIntPipe) id: number) {
+    const article = await this.articlesService.findOne(id);
+    if (!article) {
+      throw new HttpException(
+        {
+          status: HttpStatus.BAD_REQUEST,
+          error: `Article having id: ${id} doesn't exist.`,
+        },
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+    return article;
   }
 
   @Put(':id')
-  update(
+  async update(
     @Body(
       new ValidationPipe({
         whitelist: true,
@@ -46,12 +58,42 @@ export class ArticlesController {
     updateArticleDto: UpdateArticleDto,
     @Param('id', ParseIntPipe) id: number,
   ) {
-    console.log(updateArticleDto, id);
-    return this.articlesService.update(id, updateArticleDto);
+    try {
+      const updatedArticle = await this.articlesService.update(
+        id,
+        updateArticleDto,
+      );
+      if (!updatedArticle) {
+        throw new HttpException(
+          {
+            status: HttpStatus.BAD_REQUEST,
+            error: `Article having id: ${id} doesn't exist.`,
+          },
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      return updatedArticle;
+    } catch (error) {
+      throw error;
+    }
   }
 
   @Delete(':id')
-  remove() {
-    return 'This action removes a #id article';
+  async remove(@Param('id', ParseIntPipe) id: number) {
+    try {
+      const article = await this.articlesService.remove(id);
+      if (!article) {
+        throw new HttpException(
+          {
+            status: HttpStatus.BAD_REQUEST,
+            error: `Article having id: ${id} doesn't exist.`,
+          },
+          HttpStatus.BAD_REQUEST,
+        );
+      }
+      return article;
+    } catch (error) {
+      throw error;
+    }
   }
 }
